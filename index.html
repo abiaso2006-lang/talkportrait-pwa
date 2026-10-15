@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="A personal-use AI talking avatar video maker.">
+  <link rel="manifest" href="./manifest.json">
+  <title>TalkPortrait — AI Avatar Studio</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1220;--panel:#111c2e;--text:#f4f7fb;--muted:#a8b4c7;--line:#29374d;--accent:#83d5c5;--danger:#ffb4ab}
+    [data-theme="light"]{color-scheme:light;--bg:#f3f6fa;--panel:#fff;--text:#182230;--muted:#586579;--line:#d5deea;--accent:#087f72;--danger:#b42318}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+    main{max-width:760px;margin:auto;padding:16px 14px 48px}header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 16px}
+    h1{font-size:1.45rem;margin:0}h2{font-size:1.08rem;margin:0 0 8px}p{margin:6px 0 12px}.muted,small{color:var(--muted)}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}
+    .step{font-size:.8rem;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);font-weight:800}.notice{border-left:4px solid var(--accent);padding:10px 12px;background:color-mix(in srgb,var(--accent) 9%,var(--panel));border-radius:8px}
+    label{display:block;font-weight:650;margin:12px 0 5px}input,textarea,select,button{font:inherit}input[type=text],input[type=url],input[type=number],textarea,select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg);color:var(--text)}
+    textarea{min-height:140px;resize:vertical}input[type=file]{width:100%;padding:10px;border:1px dashed var(--line);border-radius:12px}
+    button,.button{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;padding:12px 14px;min-height:48px;cursor:pointer;font-weight:700}
+    button.primary{background:var(--accent);color:#06231f;border-color:transparent}button:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}.hidden{display:none!important}
+    .preview{display:block;max-width:100%;max-height:340px;margin:12px auto;border-radius:14px}.meter{height:8px;background:var(--line);border-radius:99px;overflow:hidden}.meter span{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+    .status{white-space:pre-wrap;overflow-wrap:anywhere}.danger{color:var(--danger)}.history-item{border-top:1px solid var(--line);padding:12px 0;display:flex;gap:8px;align-items:center}.history-item .meta{flex:1;min-width:0}.history-item video{width:90px;max-height:70px;border-radius:8px;background:#000}
+    details summary{cursor:pointer;font-weight:700;padding:6px 0}footer{color:var(--muted);font-size:.85rem;padding:14px 2px}a{color:var(--accent)}.checkbox-line{display:flex;gap:10px;align-items:flex-start}.checkbox-line input{width:22px;height:22px;flex-shrink:0;margin-top:3px}
+  </style>
+</head>
+<body>
+<main>
+  <header><div><h1>🎙️ TalkPortrait</h1><small>Personal AI talking-avatar studio</small></div><button id="themeBtn" aria-label="Toggle colour theme">☀️ / 🌙</button></header>
+
+  <section class="panel">
+    <div class="step">Before you begin</div>
+    <p><strong>Privacy:</strong> your image and audio are uploaded to the Hugging Face Space you select for lip-sync processing. The Space operator may process or retain them under its own terms. This app has no login, analytics, or ads, and stores history on this device.</p>
+    <label class="checkbox-line"><input id="consent" type="checkbox"><span>I have permission to use this person's image and voice, and I agree to send the selected image/audio to the chosen public Space.</span></label>
+    <p class="muted">This app shell works offline after first load, but AI generation requires internet and an available Space. Do not upload sensitive images or private recordings.</p>
+  </section>
+
+  <section class="panel">
+    <div class="step">Step 1 of 4</div><h2>Choose a portrait</h2>
+    <label for="imageFile">Select image or take a photo</label>
+    <input id="imageFile" type="file" accept="image/*" capture="user">
+    <img id="imagePreview" class="preview hidden" alt="Selected portrait preview">
+    <div id="imageAdvice" class="notice muted">Choose a clear, front-facing head-and-shoulders photo. A neutral, closed mouth usually works best. Avoid small, tilted, shadowed or hidden faces.</div>
+  </section>
+
+  <section class="panel">
+    <div class="step">Step 2 of 4</div><h2>Write or add a voice</h2>
+    <label for="script">Script for speech</label>
+    <textarea id="script" maxlength="5000" placeholder="Type your message here. You can also record or upload audio below."></textarea>
+    <div class="row"><small id="charCount">0 / 5000 characters</small><small id="estimate">Estimated length: 0 sec</small></div>
+    <p id="lengthWarning" class="danger hidden">This script may exceed 60 seconds. Shorten it or split it into separate clips. Automatic multi-clip generation depends on the selected Space's API.</p>
+    <label for="voiceSpeed">Browser voice preview speed: <span id="speedValue">1.0×</span></label>
+    <input id="voiceSpeed" type="range" min="0.7" max="1.3" step="0.1" value="1">
+    <div class="row"><button id="speakBtn">▶ Preview spoken script</button><button id="stopSpeakBtn">■ Stop preview</button></div>
+    <p class="muted">Browser speech is for preview only. It cannot reliably be saved as an audio file by this app. For generation, record your voice or upload a WAV/MP3/M4A file.</p>
+    <label for="audioFile">Upload voice audio (optional)</label><input id="audioFile" type="file" accept="audio/*">
+    <label for="recordBtn">Or record your voice</label>
+    <div class="row"><button id="recordBtn">● Start recording</button><button id="stopRecordBtn" disabled>■ Stop recording</button></div>
+    <audio id="audioPreview" class="preview hidden" controls></audio>
+    <small id="audioInfo" class="muted">No voice audio selected yet.</small>
+  </section>
+
+  <section class="panel">
+    <div class="step">Step 3 of 4</div><h2>Generate lip-sync video</h2>
+    <p class="muted">Public Spaces vary in their input names and API endpoints. Set the matching endpoint below. The default is only an example and may need changing.</p>
+    <details>
+      <summary>Server settings (advanced)</summary>
+      <label for="spaceUrl">Hugging Face Space URL</label><input id="spaceUrl" type="url" value="https://huggingface.co/spaces" placeholder="https://username-space.hf.space">
+      <label for="apiName">Gradio API endpoint name</label><input id="apiName" type="text" value="/predict" placeholder="/predict">
+      <label for="imageField">Image input field name (as shown in Space API docs)</label><input id="imageField" type="text" value="source_image">
+      <label for="audioField">Audio input field name (as shown in Space API docs)</label><input id="audioField" type="text" value="driven_audio">
+      <p class="muted">Use the Space's “Use via API” or “View API” panel to confirm endpoint and input order. If the API expects positional inputs or different names, edit the request builder in the code.</p>
+      <label for="fallbackUrls">Alternative Space URLs (one per line)</label>
+      <textarea id="fallbackUrls">https://huggingface.co/spaces
+https://huggingface.co/spaces
+https://huggingface.co/spaces</textarea>
+      <button id="saveSettingsBtn">Save settings on this device</button>
+    </details>
+    <div class="row" style="margin-top:12px"><button id="generateBtn" class="primary">Generate video</button><button id="cancelBtn" disabled>Cancel</button></div>
+    <div class="meter" aria-label="Generation progress"><span id="progressBar"></span></div>
+    <p id="status" class="status" role="status" aria-live="polite">Ready. Generation needs an image, audio, consent, and an available Space.</p>
+    <div class="row"><button id="tryAnotherBtn" class="hidden">Try another server</button><button id="clearStatusBtn">Clear status</button></div>
+  </section>
+
+  <section class="panel">
+    <div class="step">Step 4 of 4</div><h2>Preview and save</h2>
+    <video id="resultVideo" class="preview hidden" controls playsinline></video>
+    <div class="row"><button id="downloadBtn" disabled>⬇ Download MP4</button><button id="shareBtn" disabled>Share</button></div>
+    <p id="resultNote" class="muted">Generated videos will appear here.</p>
+  </section>
+
+  <section class="panel"><h2>On-device history</h2><p class="muted">History is stored in this browser's IndexedDB. Clearing browser data may remove it. Large videos can use significant phone storage.</p><div id="historyList"><small>No saved videos yet.</small></div></section>
+
+  <footer>
+    <strong>Responsible use:</strong> use only portraits and voices you have permission to use. Label AI-generated or AI-altered videos when sharing publicly. Do not use this tool to impersonate someone or mislead viewers.
+    <p>Optional caption burning is not included: ffmpeg.wasm can consume substantial memory and may crash mobile browsers. Add captions in a lightweight editor after downloading if needed.</p>
+  </footer>
+</main>
+
+<script type="module">
+  // Pinned Gradio client. Public Spaces must expose a compatible Gradio API.
+  import { Client, handle_file } from "https://esm.sh/@gradio/client@1.15.0";
+
+  const $ = id => document.getElementById(id);
+  let selectedImage = null, selectedAudio = null, recorder = null, chunks = [];
+  let currentJob = null, currentVideoUrl = null, lastSpaceIndex = 0, stream = null;
+  const FALLBACKS = () => $("fallbackUrls").value.split(/\n/).map(s=>s.trim()).filter(Boolean).filter(s=>s !== "https://huggingface.co/spaces");
+  const DB_NAME = "talkportrait-db", STORE = "videos";
+
+  function status(message, error=false) {
+    $("status").textContent = message;
+    $("status").classList.toggle("danger", error);
+  }
+  function progress(n) { $("progressBar").style.width = Math.max(0,Math.min(100,n)) + "%"; }
+  function safeName(s) { return (s || "talkportrait").replace(/[^a-z0-9_-]+/gi,"_").slice(0,50); }
+  function estimate() {
+    const text = $("script").value;
+    $("charCount").textContent = `${text.length} / 5000 characters`;
+    const seconds = Math.round(text.trim().split(/\s+/).filter(Boolean).length / 2.5);
+    $("estimate").textContent = `Estimated length: ${seconds} sec`;
+    $("lengthWarning").classList.toggle("hidden", seconds <= 60);
+  }
+  function setAudio(file) {
+    selectedAudio = file || null;
+    if (!file) { $("audioPreview").classList.add("hidden"); $("audioInfo").textContent="No voice audio selected yet."; return; }
+    $("audioPreview").src = URL.createObjectURL(file);
+    $("audioPreview").classList.remove("hidden");
+    $("audioInfo").textContent = `${file.name || "Recorded audio"} · ${(file.size/1024/1024).toFixed(2)} MB`;
+  }
+
+  // IndexedDB keeps generated MP4 blobs on the phone, not on a server.
+  function openDb() {
+    return new Promise((resolve,reject)=>{
+      const req=indexedDB.open(DB_NAME,1);
+      req.onupgradeneeded=()=>req.result.createObjectStore(STORE,{keyPath:"id",autoIncrement:true});
+      req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error);
+    });
+  }
+  async function dbAdd(item) {
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).add(item);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});
+  }
+  async function dbAll() {
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,"readonly"),r=tx.objectStore(STORE).getAll();r.onsuccess=()=>resolve(r.result.reverse());r.onerror=()=>reject(r.error);});
+  }
+  async function dbDelete(id) {
+    const db=await openDb();
+    return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,"readwrite");tx.objectStore(STORE).delete(Number(id));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
+  }
+  async function renderHistory() {
+    try {
+      const items=await dbAll(), root=$("historyList"); root.replaceChildren();
+      if(!items.length){root.innerHTML="<small>No saved videos yet.</small>";return;}
+      for(const item of items){
+        const row=document.createElement("div");row.className="history-item";
+        const video=document.createElement("video");video.controls=true;video.playsInline=true;video.src=URL.createObjectURL(item.blob);
+        const meta=document.createElement("div");meta.className="meta";
+        const title=document.createElement("strong");title.textContent=item.name;
+        const date=document.createElement("small");date.textContent=new Date(item.created).toLocaleString();
+        meta.append(title,document.createElement("br"),date);
+        const dl=document.createElement("button");dl.textContent="Save";dl.onclick=()=>downloadBlob(item.blob,item.name);
+        const del=document.createElement("button");del.textContent="Delete";del.onclick=async()=>{try{await dbDelete(item.id);renderHistory();}catch{status("Could not delete this history item.",true);}};
+        row.append(video,meta,dl,del);root.append(row);
+      }
+    } catch { $("historyList").textContent="Local history is unavailable in this browser."; }
+  }
+  function downloadBlob(blob,name) {
+    const url=URL.createObjectURL(blob), a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  }
+  async function resolveOutput(result) {
+    // Gradio outputs differ by Space. Support common URL/file result shapes.
+    let candidate = Array.isArray(result) ? result[0] : result;
+    if(candidate && typeof candidate==="object") candidate = candidate.video || candidate.output || candidate.url || candidate.path || candidate;
+    if(candidate && typeof candidate==="object" && candidate.url) candidate=candidate.url;
+    if(candidate instanceof Blob) return candidate;
+    if(typeof candidate!=="string") throw new Error("The Space returned an unfamiliar output format. Check its API docs and output mapping.");
+    let url=candidate;
+    if(url.startsWith("/")) {
+      const base=$("spaceUrl").value.trim().replace(/\/+$/,"");
+      url=base+url;
+    }
+    let response;
+    try { response=await fetch(url); } catch { throw new Error("Could not download the returned video. The Space may block browser access or have gone offline."); }
+    if(!response.ok) throw new Error("The Space returned a video link that could not be downloaded (HTTP "+response.status+").");
+    return await response.blob();
+  }
+
+  $("imageFile").addEventListener("change",()=>{
+    selectedImage=$("imageFile").files?.[0]||null;
+    if(!selectedImage){$("imagePreview").classList.add("hidden");return;}
+    $("imagePreview").src=URL.createObjectURL(selectedImage);$("imagePreview").classList.remove("hidden");
+    // Heuristic only: cannot reliably detect face size, tilt or occlusion without a vision model.
+    const img=new Image();
+    img.onload=()=>{let msg=`Image dimensions: ${img.naturalWidth} × ${img.naturalHeight}. `;
+      if(Math.min(img.naturalWidth,img.naturalHeight)<400) msg+="This image is small; a higher-resolution photo may work better. ";
+      msg+="Automatic face detection is not built in, so visually check that the face is large, upright, unobstructed and front-facing.";
+      $("imageAdvice").textContent=msg;};
+    img.onerror=()=>$("imageAdvice").textContent="Could not read this image. Try a JPG or PNG.";
+    img.src=URL.createObjectURL(selectedImage);
+  });
+  $("audioFile").addEventListener("change",()=>setAudio($("audioFile").files?.[0]||null));
+  $("script").addEventListener("input",estimate);
+  $("voiceSpeed").addEventListener("input",()=> $("speedValue").textContent=Number($("voiceSpeed").value).toFixed(1)+"×");
+  $("speakBtn").onclick=()=>{
+    try {
+      if(!("speechSynthesis" in window)){status("This browser does not support speech preview.",true);return;}
+      const text=$("script").value.trim(); if(!text){status("Type a script first.",true);return;}
+      speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=Number($("voiceSpeed").value);speechSynthesis.speak(u);
+    } catch {status("Speech preview could not start on this device.",true);}
+  };
+  $("stopSpeakBtn").onclick=()=>{try{speechSynthesis.cancel();}catch{}};
+
+  $("recordBtn").onclick=async()=>{
+    try{
+      if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder){status("Audio recording is not supported here. Upload an audio file instead.",true);return;}
+      stream=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];
+      const mime=MediaRecorder.isTypeSupported("audio/webm;codecs=opus")?"audio/webm;codecs=opus":"";
+      recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+      recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+      recorder.onstop=()=>{const blob=new Blob(chunks,{type:recorder.mimeType||"audio/webm"});setAudio(new File([blob],"recorded-voice.webm",{type:blob.type}));stream?.getTracks().forEach(t=>t.stop());stream=null;};
+      recorder.start();$("recordBtn").disabled=true;$("stopRecordBtn").disabled=false;status("Recording… speak clearly, then press Stop recording.");
+    }catch{status("Microphone permission was denied or recording failed. Upload a voice file instead.",true);}
+  };
+  $("stopRecordBtn").onclick=()=>{try{if(recorder?.state==="recording")recorder.stop();$("recordBtn").disabled=false;$("stopRecordBtn").disabled=true;}catch{status("Could not stop the recording cleanly.",true);}};
+
+  $("saveSettingsBtn").onclick=()=>{try{localStorage.setItem("tp-settings",JSON.stringify({spaceUrl:$("spaceUrl").value,apiName:$("apiName").value,imageField:$("imageField").value,audioField:$("audioField").value,fallbackUrls:$("fallbackUrls").value}));status("Settings saved on this device.");}catch{status("Settings could not be saved.",true);}};
+  try{const s=JSON.parse(localStorage.getItem("tp-settings")||"{}");for(const k of ["spaceUrl","apiName","imageField","audioField","fallbackUrls"])if(s[k])$(k).value=s[k];}catch{}
+  $("themeBtn").onclick=()=>{const root=document.documentElement;root.dataset.theme=root.dataset.theme==="light"?"dark":"light";try{localStorage.setItem("tp-theme",root.dataset.theme);}catch{}};
+  try{document.documentElement.dataset.theme=localStorage.getItem("tp-theme")||"dark";}catch{}
+
+  $("cancelBtn").onclick=()=>{
+    try{if(currentJob?.cancel)currentJob.cancel();}catch{}
+    currentJob=null; $("cancelBtn").disabled=true; $("generateBtn").disabled=false;status("Cancellation requested. A remote Space may continue processing after the browser cancels its wait.");progress(0);
+  };
+  $("clearStatusBtn").onclick=()=>status("Ready.");
+  $("tryAnotherBtn").onclick=async()=>{lastSpaceIndex++;await generate(true);};
+
+  async function generate(useNext=false) {
+    if(!$("consent").checked){status("Please tick the consent checkbox first.",true);return;}
+    if(!selectedImage){status("Choose a portrait image first.",true);return;}
+    if(!selectedAudio){status("Upload or record voice audio. Browser speech preview is not an exportable audio file.",true);return;}
+    const spaces=[$("spaceUrl").value.trim(),...FALLBACKS()].filter(Boolean);
+    if(!spaces.length){status("Enter a Hugging Face Space URL in settings.",true);return;}
+    if(useNext && spaces.length>1) lastSpaceIndex=(lastSpaceIndex+1)%spaces.length;
+    const chosen=spaces[lastSpaceIndex%spaces.length];
+    $("spaceUrl").value=chosen;
+    $("generateBtn").disabled=true;$("cancelBtn").disabled=false;$("tryAnotherBtn").classList.add("hidden");progress(5);
+    const start=Date.now();let ticker=setInterval(()=>{const sec=Math.round((Date.now()-start)/1000);if(currentJob)status(`Generating… elapsed ${sec}s. The Space may be loading or waiting in a queue.`);},1000);
+    try {
+      status("Connecting to Space…"); 
+      // Catch errors around connection separately so the user gets a readable message.
+      let client;
+      try {client=await Client.connect(chosen);} catch {throw new Error("Could not connect. The Space may be sleeping, private, busy, or unavailable.");}
+      progress(15);status("Uploading image and audio to the selected Space…");
+      // Most Gradio endpoints take positional inputs. This generic request sends image then audio.
+      // If a Space expects different order or additional settings, adjust this line using its API docs.
+      let job;
+      try {job=client.submit($("apiName").value.trim()||"/predict",[await handle_file(selectedImage),await handle_file(selectedAudio)]);} catch {throw new Error("The request could not be submitted. Check the endpoint and input order in the Space API documentation.");}
+      currentJob=job;
+      try {
+        if(job.on) job.on("status",evt=>{
+          const q=evt?.position ?? evt?.queue_position;
+          const msg=evt?.stage || evt?.status || "Processing";
+          status((q!==undefined?`Queue position: ${q}. `:"")+String(msg));
+          progress(25);
+        });
+      } catch {}
+      let result;
+      try {result=await job; } catch {throw new Error("The Space failed during generation. It may be over quota, have an incompatible API, or have timed out.");}
+      currentJob=null;progress(75);status("Video returned. Preparing download…");
+      const blob=await resolveOutput(result);
+      if(!blob.size) throw new Error("The Space returned an empty video file.");
+      const name=safeName("talkportrait-"+new Date().toISOString().replace(/[:.]/g,"-"))+".mp4";
+      currentVideoUrl=URL.createObjectURL(blob);$("resultVideo").src=currentVideoUrl;$("resultVideo").classList.remove("hidden");
+      $("downloadBtn").disabled=false;$("shareBtn").disabled=false;$("downloadBtn").onclick=()=>downloadBlob(blob,name);
+      $("shareBtn").onclick=async()=>{
+        try{
+          const file=new File([blob],name,{type:blob.type||"video/mp4"});
+          if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:"AI-generated talking portrait",text:"AI-generated talking-avatar video"});}
+          else {status("This browser does not support sharing video files. Use Download MP4 instead.",true);}
+        }catch(e){if(e?.name!=="AbortError")status("Sharing failed. Download the video and share it from your Gallery/Files app.",true);}
+      };
+      $("resultNote").textContent=`Ready · ${(blob.size/1024/1024).toFixed(1)} MB · AI-generated video.`;
+      try{await dbAdd({name,blob,created:Date.now()});await renderHistory();}catch{status("Video is ready, but this browser could not save it to local history.",true);}
+      progress(100);status("Finished. Preview the video, download it, or share it.");
+    } catch(e) {
+      const msg=e instanceof Error?e.message:"Something went wrong. Please try again.";
+      status(msg,true);$("tryAnotherBtn").classList.remove("hidden");
+    } finally {
+      clearInterval(ticker);currentJob=null;$("cancelBtn").disabled=true;$("generateBtn").disabled=false;
+    }
+  }
+  $("generateBtn").onclick=()=>generate(false);
+  estimate();renderHistory();
+
+  // Offline app shell only; generation requires an internet connection.
+  if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+</script>
+</body>
+</html>
